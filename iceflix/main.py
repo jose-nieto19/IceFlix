@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
+#pylint: disable=invalid-name, unused-argument, import-error
 
 import logging
 
 import sys
 
+import IceFlix  # pylint:disable=import-error
+
 import Ice
 
 Ice.loadSlice('iceflix.ice')
-
-import IceFlix  # pylint:disable=import-error
 
 
 class Main(IceFlix.Main):
@@ -18,26 +19,32 @@ class Main(IceFlix.Main):
         self.mediaCatalogs = []
         self.fileServices = []
 
-    def getAuthenticator(self, current):  # pylint:disable=invalid-name, unused-argument
+    def getAuthenticator(self, current=None):  # pylint:disable=invalid-name, unused-argument
         "Return the stored Authenticator proxy."
         try:
-            
-        except:
-            raise IceFlix.TemporaryUnavailable()
+            for i in self.authenticators:
+                if i.ice_ping() is None:
+                    return IceFlix.AuthenticatorPrx.checkedCast(i)
+        except Exception as e:
+            raise IceFlix.TemporaryUnavailable() from e
 
-    def getCatalog(self, current):  # pylint:disable=invalid-name, unused-argument
+    def getCatalog(self, current=None):  # pylint:disable=invalid-name, unused-argument
         "Return the stored MediaCatalog proxy."
-            try:
+        try:
+            for i in self.mediaCatalogs:
+                if i.ice_ping() is None:
+                    return IceFlix.MediaCatalogPrx.checkedCast(i)
+        except Exception as e:
+            raise IceFlix.TemporaryUnavailable() from e
 
-            except:
-                raise IceFlix.TemporaryUnavailable()
-
-    def getFileService(self, current):
+    def getFileService(self, current=None):
         "Return the stored FileService proxy."
-            try:
-                
-            except:
-                raise IceFlix.TemporaryUnavailable()
+        try:
+            for i in self.fileServices:
+                if i.ice_ping() is None:
+                    return IceFlix.FileServicePrx.checkedCast(i)
+        except Exception as e:
+            raise IceFlix.TemporaryUnavailable() from e
 
     def newService(self, proxy, service_id, current):  # pylint:disable=invalid-name, unused-argument
         "Receive a proxy of a new service."
