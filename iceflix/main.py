@@ -1,38 +1,60 @@
-"""Module containing a template for a main service."""
+#!/usr/bin/env python3
 
 import logging
 
+import sys
+
 import Ice
+
+Ice.loadSlice('iceflix.ice')
 
 import IceFlix  # pylint:disable=import-error
 
 
 class Main(IceFlix.Main):
-    """Servant for the IceFlix.Main interface.
 
-    Disclaimer: this is demo code, it lacks of most of the needed methods
-    for this interface. Use it with caution
-    """
+    def __init__:
+        self.authenticators = []
+        self.mediaCatalogs = []
+        self.fileServices = []
 
     def getAuthenticator(self, current):  # pylint:disable=invalid-name, unused-argument
         "Return the stored Authenticator proxy."
-        # TODO: implement
-        return None
+        try:
+            
+        except:
+            raise IceFlix.TemporaryUnavailable()
 
     def getCatalog(self, current):  # pylint:disable=invalid-name, unused-argument
         "Return the stored MediaCatalog proxy."
-        # TODO: implement
-        return None
+            try:
+
+            except:
+                raise IceFlix.TemporaryUnavailable()
+
+    def getFileService(self, current):
+        "Return the stored FileService proxy."
+            try:
+                
+            except:
+                raise IceFlix.TemporaryUnavailable()
 
     def newService(self, proxy, service_id, current):  # pylint:disable=invalid-name, unused-argument
         "Receive a proxy of a new service."
-        # TODO: implement
-        return
 
-    def announce(self, proxy, service_id, current):  # pylint:disable=invalid-name, unused-argument
+    def announce(self, proxy, service_id, current=None):  # pylint:disable=invalid-name, unused-argument
         "Announcements handler."
-        # TODO: implement
-        return
+        if proxy.ice_isA('::IceFlix::Authenticator'):
+            print(f'Authenticator service: {service_id}')
+            self.authenticators.append(IceFlix.AuthenticatorPrx.uncheckedCast(service_id))
+
+        elif proxy.ice_isA('::IceFlix::MediaCatalog'):
+            print(f'Mediacatalog service: {service_id}')
+            self.mediaCatalogs.append(IceFlix.MediaCatalogPrx.uncheckedCast(service_id))
+
+        elif proxy.ice_isA('::IceFlix::FileService'):
+            print(f'FileService service: {service_id}')
+            self.fileServices.append(IceFlix.AuthenticatorPrx.uncheckedCast(service_id))
 
 
 class MainApp(Ice.Application):
@@ -46,7 +68,13 @@ class MainApp(Ice.Application):
 
     def run(self, args):
         """Run the application, adding the needed objects to the adapter."""
+
         logging.info("Running Main application")
+
+        authenticator = self.getAuthenticator()
+        catalog = self.getCatalog()
+        fileService = self.getFileService()
+
         comm = self.communicator()
         self.adapter = comm.createObjectAdapter("MainAdapter")
         self.adapter.activate()
@@ -57,3 +85,7 @@ class MainApp(Ice.Application):
         comm.waitForShutdown()
 
         return 0
+
+
+main = MainApp()
+sys.exit(main.main(sys.argv))
