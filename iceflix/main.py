@@ -13,7 +13,7 @@ import IceFlix  # pylint:disable=import-error
 
 class Main(IceFlix.Main):
 
-    def __init__:
+    def __init__(self):
         self.authenticators = []
         self.mediaCatalogs = []
         self.fileServices = []
