@@ -1,3 +1,4 @@
+"""Main service for IceFlix"""
 #!/usr/bin/env python3
 #pylint: disable=invalid-name, unused-argument, import-error
 
@@ -13,6 +14,7 @@ Ice.loadSlice('iceflix.ice')
 
 
 class Main(IceFlix.Main):
+    """Services provided by the main service."""
 
     def __init__(self):
         self.authenticators = []
@@ -48,6 +50,25 @@ class Main(IceFlix.Main):
 
     def newService(self, proxy, service_id, current):  # pylint:disable=invalid-name, unused-argument
         "Receive a proxy of a new service."
+        if (proxy not in self.authenticators or
+             proxy not in self.mediaCatalogs or proxy not in self.fileServices):
+            if proxy.ice_isA('::IceFlix::Authenticator'):
+                self.authenticators.append(IceFlix.AuthenticatorPrx.uncheckedCast(service_id))
+
+            elif proxy.ice_isA('::IceFlix::MediaCatalog'):
+                self.mediaCatalogs.append(IceFlix.MediaCatalogPrx.uncheckedCast(service_id))
+
+            elif proxy.ice_isA('::IceFlix::FileService'):
+                self.fileServices.append(IceFlix.AuthenticatorPrx.uncheckedCast(service_id))
+
+        elif proxy in self.authenticators:
+            self.authenticators.remove(IceFlix.AuthenticatorPrx.uncheckedCast(service_id))
+
+        elif proxy in self.mediaCatalogs:
+            self.mediaCatalogs.remove(IceFlix.MediaCatalogPrx.uncheckedCast(service_id))
+
+        elif proxy in self.fileServices:
+            self.fileServices.remove(IceFlix.MediaCatalogPrx.uncheckedCast(service_id))
 
     def announce(self, proxy, service_id, current=None):  # pylint:disable=invalid-name, unused-argument
         "Announcements handler."
@@ -77,10 +98,6 @@ class MainApp(Ice.Application):
         """Run the application, adding the needed objects to the adapter."""
 
         logging.info("Running Main application")
-
-        authenticator = self.getAuthenticator()
-        catalog = self.getCatalog()
-        fileService = self.getFileService()
 
         comm = self.communicator()
         self.adapter = comm.createObjectAdapter("MainAdapter")
