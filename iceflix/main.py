@@ -6,6 +6,8 @@ import logging
 
 import sys
 
+import threading
+
 import IceFlix  # pylint:disable=import-error
 
 import Ice
@@ -48,7 +50,7 @@ class Main(IceFlix.Main):
         except Exception as e:
             raise IceFlix.TemporaryUnavailable() from e
 
-    def newService(self, proxy, service_id, current):  # pylint:disable=invalid-name, unused-argument
+    def newService(self, proxy, service_id, current=None):  # pylint:disable=invalid-name, unused-argument
         "Receive a proxy of a new service."
         if (proxy not in self.authenticators or
              proxy not in self.mediaCatalogs or proxy not in self.fileServices):
@@ -72,18 +74,32 @@ class Main(IceFlix.Main):
 
     def announce(self, proxy, service_id, current=None):  # pylint:disable=invalid-name, unused-argument
         "Announcements handler."
+        timer = threading.Timer(30.00,self.eliminarProxy(proxy,service_id))
         if proxy.ice_isA('::IceFlix::Authenticator'):
             print(f'Authenticator service: {service_id}')
             self.authenticators.append(IceFlix.AuthenticatorPrx.uncheckedCast(service_id))
+            timer.start()
 
         elif proxy.ice_isA('::IceFlix::MediaCatalog'):
             print(f'Mediacatalog service: {service_id}')
             self.mediaCatalogs.append(IceFlix.MediaCatalogPrx.uncheckedCast(service_id))
+            timer.start()
 
         elif proxy.ice_isA('::IceFlix::FileService'):
             print(f'FileService service: {service_id}')
             self.fileServices.append(IceFlix.AuthenticatorPrx.uncheckedCast(service_id))
+            timer.start()
 
+    def eliminarProxy(self, proxy, service_id):
+        "Function that removes proxys from the proxys lists after 30 secs"
+        if proxy in self.authenticators:
+            self.authenticators.remove(IceFlix.AuthenticatorPrx.uncheckedCast(service_id))
+
+        elif proxy in self.mediaCatalogs:
+            self.mediaCatalogs.remove(IceFlix.MediaCatalogPrx.uncheckedCast(service_id))
+
+        elif proxy in self.fileServices:
+            self.fileServices.remove(IceFlix.MediaCatalogPrx.uncheckedCast(service_id))
 
 class MainApp(Ice.Application):
     """Example Ice.Application for a Main service."""
@@ -113,3 +129,4 @@ class MainApp(Ice.Application):
 
 main = MainApp()
 sys.exit(main.main(sys.argv))
+
