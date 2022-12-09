@@ -129,4 +129,3 @@ class MainApp(Ice.Application):
 
 main = MainApp()
 sys.exit(main.main(sys.argv))
-
