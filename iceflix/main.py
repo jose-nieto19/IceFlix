@@ -72,14 +72,18 @@ class Main(IceFlix.Main):
             self.fileServices.remove(IceFlix.FileServicePrx.uncheckedCast(service_id))
 
         else:
+            timer = threading.Timer(30.00,self.eliminarProxy(service_id))
             if proxy.ice_isA('::IceFlix::Authenticator'):
                 self.authenticators.append(IceFlix.AuthenticatorPrx.uncheckedCast(service_id))
+                timer.start()
 
             elif proxy.ice_isA('::IceFlix::MediaCatalog'):
                 self.mediaCatalogs.append(IceFlix.MediaCatalogPrx.uncheckedCast(service_id))
+                timer.start()
 
             elif proxy.ice_isA('::IceFlix::FileService'):
                 self.fileServices.append(IceFlix.FileServicePrx.uncheckedCast(service_id))
+                timer.start()
 
     def announce(self, proxy, service_id, current=None):
         "Announcements handler."
