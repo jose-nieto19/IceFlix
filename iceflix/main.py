@@ -30,10 +30,9 @@ class Main(IceFlix.Main):
                 try:
                     if i.ice_ping() is None:
                         return IceFlix.AuthenticatorPrx.checkedCast(i)
-                except Exception as e:
-                    raise IceFlix.TemporaryUnavailable() from e
-        else:
-            raise IceFlix.TemporaryUnavailable()
+                except Exception:
+                    continue
+        raise IceFlix.TemporaryUnavailable()
 
     def getCatalog(self, current=None):
         "Return the stored MediaCatalog proxy."
@@ -42,10 +41,9 @@ class Main(IceFlix.Main):
                 try:
                     if i.ice_ping() is None:
                         return IceFlix.MediaCatalogPrx.checkedCast(i)
-                except Exception as e:
-                    raise IceFlix.TemporaryUnavailable() from e
-        else:
-            raise IceFlix.TemporaryUnavailable()
+                except Exception:
+                    continue
+        raise IceFlix.TemporaryUnavailable()
 
     def getFileService(self, current=None):
         "Return the stored FileService proxy."
@@ -54,10 +52,9 @@ class Main(IceFlix.Main):
                 try:
                     if i.ice_ping() is None:
                         return IceFlix.FileServicePrx.checkedCast(i)
-                except Exception as e:
-                    raise IceFlix.TemporaryUnavailable() from e
-        else:
-            raise IceFlix.TemporaryUnavailable()
+                except Exception:
+                    continue
+        raise IceFlix.TemporaryUnavailable()            
 
     def newService(self, proxy, service_id, current=None):
         "Receive a proxy of a new service."
@@ -72,7 +69,7 @@ class Main(IceFlix.Main):
             self.fileServices.remove(IceFlix.FileServicePrx.uncheckedCast(proxy))
 
         else:
-            timer = threading.Timer(30.00,self.eliminarProxy(proxy))
+            timer = threading.Timer(30.00,self.eliminarProxy,(proxy,))
             if proxy.ice_isA('::IceFlix::Authenticator'):
                 print(f'Authenticator service: {service_id}')
                 self.authenticators.append(IceFlix.AuthenticatorPrx.uncheckedCast(proxy))
@@ -91,7 +88,7 @@ class Main(IceFlix.Main):
     def announce(self, proxy, service_id, current=None):
         "Announcements handler."
 
-        timer = threading.Timer(30.00,self.eliminarProxy(proxy))
+        timer = threading.Timer(30.00,self.eliminarProxy,(proxy,))
         if proxy.ice_isA('::IceFlix::Authenticator'):
             if IceFlix.AuthenticatorPrx.uncheckedCast(proxy) not in self.authenticators:
                 return
