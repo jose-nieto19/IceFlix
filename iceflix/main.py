@@ -14,84 +14,18 @@ Ice.loadSlice('iceflix/iceflix.ice')
 
 import IceFlix
 
-
-class Main(IceFlix.Main):
-    """Services provided by the main service."""
+class Announcement(IceFlix.Announcement):
+    """Announcement interface"""
 
     def __init__(self):
         self.authenticators = {}
         self.mediaCatalogs = {}
         self.fileServices = {}
 
-    def getAuthenticator(self, current=None):
-        "Return the stored Authenticator proxy."
-        authList = list(self.authenticators.values())
-        if len(authList) != 0:
-            for i in authList:
-                try:
-                    if i.ice_ping() is None:
-                        return IceFlix.AuthenticatorPrx.checkedCast(i)
-                except Exception:
-                    continue
-        raise IceFlix.TemporaryUnavailable()
-
-    def getCatalog(self, current=None):
-        "Return the stored MediaCatalog proxy."
-        catList = list(self.mediaCatalogs.values())
-        if len(catList) != 0:
-            for i in catList:
-                try:
-                    if i.ice_ping() is None:
-                        return IceFlix.MediaCatalogPrx.checkedCast(i)
-                except Exception:
-                    continue
-        raise IceFlix.TemporaryUnavailable()
-
-    def getFileService(self, current=None):
-        "Return the stored FileService proxy."
-        fsList = list(self.fileServices.values())
-        if len(fsList) != 0:
-            for i in fsList:
-                try:
-                    if i.ice_ping() is None:
-                        return IceFlix.FileServicePrx.checkedCast(i)
-                except Exception:
-                    continue
-        raise IceFlix.TemporaryUnavailable()
-
-    def newService(self, proxy, service_id, current=None):
-        "Receive a proxy of a new service."
-
-        if str(service_id) in self.authenticators:
-            self.authenticators.pop(str(service_id))
-
-        elif str(service_id) in self.mediaCatalogs:
-            self.mediaCatalogs.pop(str(service_id))
-
-        elif str(service_id) in self.fileServices:
-            self.fileServices.pop(str(service_id))
-
-        else:
-            timer = threading.Timer(30.00,self.eliminarProxy,(service_id,))
-            if proxy.ice_isA('::IceFlix::Authenticator'):
-                print(f'Authenticator service: {service_id}')
-                self.authenticators[str(service_id)] = IceFlix.AuthenticatorPrx.uncheckedCast(proxy)
-                timer.start()
-
-            elif proxy.ice_isA('::IceFlix::MediaCatalog'):
-                print(f'MediaCatalog service: {service_id}')
-                self.mediaCatalogs[str(service_id)] = IceFlix.MediaCatalogPrx.uncheckedCast(proxy)
-                timer.start()
-
-            elif proxy.ice_isA('::IceFlix::FileService'):
-                print(f'FileService service: {service_id}')
-                self.fileServices[str(service_id)] = IceFlix.FileServicePrx.uncheckedCast(proxy)
-                timer.start()
-
     def announce(self, proxy, service_id, current=None):
         "Announcements handler."
 
-        timer = threading.Timer(30.00,self.eliminarProxy,(service_id,))
+        timer = threading.Timer(10.00,self.eliminarProxy,(service_id,))
         if proxy.ice_isA('::IceFlix::Authenticator'):
             if str(service_id) not in self.authenticators:
                 return
@@ -123,6 +57,48 @@ class Main(IceFlix.Main):
 
         elif str(service_id) in self.fileServices:
             self.fileServices.pop(str(service_id))
+
+class Main(IceFlix.Main):
+    """Services provided by the main service."""
+
+    def __init__(self, announcement):
+        self.announcement = announcement
+
+    def getAuthenticator(self, current=None):
+        "Return the stored Authenticator proxy."
+        authList = list(self.announcement.authenticators.values())
+        if len(authList) != 0:
+            for i in authList:
+                try:
+                    if i.ice_ping() is None:
+                        return IceFlix.AuthenticatorPrx.checkedCast(i)
+                except Exception:
+                    continue
+        raise IceFlix.TemporaryUnavailable()
+
+    def getCatalog(self, current=None):
+        "Return the stored MediaCatalog proxy."
+        catList = list(self.announcement.mediaCatalogs.values())
+        if len(catList) != 0:
+            for i in catList:
+                try:
+                    if i.ice_ping() is None:
+                        return IceFlix.MediaCatalogPrx.checkedCast(i)
+                except Exception:
+                    continue
+        raise IceFlix.TemporaryUnavailable()
+
+    def getFileService(self, current=None):
+        "Return the stored FileService proxy."
+        fsList = list(self.announcement.fileServices.values())
+        if len(fsList) != 0:
+            for i in fsList:
+                try:
+                    if i.ice_ping() is None:
+                        return IceFlix.FileServicePrx.checkedCast(i)
+                except Exception:
+                    continue
+        raise IceFlix.TemporaryUnavailable()
 
 class MainApp(Ice.Application):
     """Example Ice.Application for a Main service."""
