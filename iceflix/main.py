@@ -29,7 +29,7 @@ class Announcement(IceFlix.Announcement):
     def announce(self, proxy, service_id, current=None):
         "Announcements handler."
 
-        timer = threading.Timer(10.00,self.eliminarProxy,(service_id,))
+        timer = threading.Timer(10.0,function=self.removeProxy,args=([service_id]))
         if proxy.ice_isA('::IceFlix::Authenticator'):
             if str(service_id) not in self.authenticators:
                 return
@@ -51,8 +51,8 @@ class Announcement(IceFlix.Announcement):
             self.fileServices[str(service_id)] = IceFlix.FileServicePrx.uncheckedCast(proxy)
             timer.start()
 
-    def eliminarProxy(self, service_id):
-        "Function that removes proxys from the proxys lists after 30 secs"
+    def removeProxy(self, service_id):
+        "Function that removes proxys from the proxys lists after 10 secs"
         if str(service_id) in self.authenticators:
             self.authenticators.pop(str(service_id))
 
@@ -116,6 +116,13 @@ class MainApp(Ice.Application):
         self.adapterMain = None
         self.adapterAnnouncement = None
 
+    def announceMain(self, announcer):
+        """Function that announces main in the topic "Announcement" every 10 secs."""
+        announcer.announce(self.proxy, self.mainId)
+        timer = threading.Timer(10.0,function=self.announceMain,args=([announcer]))
+        timer.start()
+
+
     def run(self, args):
         """Run the application, adding the needed objects to the adapter."""
 
@@ -138,13 +145,11 @@ class MainApp(Ice.Application):
         publisher = topic.getPublisher()
         announcer = IceFlix.AnnouncementPrx.uncheckedCast(publisher)
 
-        announcer.announce(self.proxy, self.mainId)
+        self.announceMain(announcer)
 
         self.adapterAnnouncement.activate()
         self.shutdownOnInterrupt()
         comm.waitForShutdown()
-
-        topic.unsuscribe(subscriber)
 
         return 0
 
