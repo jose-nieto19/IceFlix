@@ -8,7 +8,11 @@ import sys
 
 import threading
 
+import uuid
+
 import Ice
+
+import IceStorm
 
 Ice.loadSlice('iceflix/iceflix.ice')
 
@@ -105,9 +109,12 @@ class MainApp(Ice.Application):
 
     def __init__(self):
         super().__init__()
-        self.servant = Main()
+        self.announcementServant = Announcement()
+        self.servant = Main(self.announcementServant)
         self.proxy = None
-        self.adapter = None
+        self.mainId = str(uuid.uuid4())
+        self.adapterMain = None
+        self.adapterAnnouncement = None
 
     def run(self, args):
         """Run the application, adding the needed objects to the adapter."""
@@ -115,14 +122,29 @@ class MainApp(Ice.Application):
         logging.info("Running Main application")
 
         comm = self.communicator()
-        self.adapter = comm.createObjectAdapter("MainAdapter")
-        self.adapter.activate()
+        self.adapterMain = comm.createObjectAdapter("MainAdapter")
+        self.adapterMain.activate()
 
-        self.proxy = self.adapter.addWithUUID(self.servant)
-        print(self.proxy)
+        self.proxy = self.adapterMain.addWithUUID(self.servant)
 
+        topicManagerPrx = comm.stringToProxy("IceStorm/TopicManager:tcp -p 10000")
+        topicManager = IceStorm.TopicManagerPrx.checkedCast(topicManagerPrx)
+        self.adapterAnnouncement = comm.createObjectAdapter("AnnouncementAdapter")
+        subscriber = self.adapterAnnouncement.addWithUUID(self.announcementServant)
+
+        topic = topicManager.retrieve("Announcements")
+        topic.subscribeAndGetPublisher({},subscriber)
+
+        publisher = topic.getPublisher()
+        announcer = IceFlix.AnnouncementPrx.uncheckedCast(publisher)
+
+        announcer.announce(self.proxy, self.mainId)
+
+        self.adapterAnnouncement.activate()
         self.shutdownOnInterrupt()
         comm.waitForShutdown()
+
+        topic.unsuscribe(subscriber)
 
         return 0
 
