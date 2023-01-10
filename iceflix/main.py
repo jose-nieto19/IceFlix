@@ -18,6 +18,8 @@ Ice.loadSlice('iceflix/iceflix.ice')
 
 import IceFlix
 
+mainId = str(uuid.uuid4())
+
 class Announcement(IceFlix.Announcement):
     """Announcement interface"""
 
@@ -31,25 +33,22 @@ class Announcement(IceFlix.Announcement):
 
         timer = threading.Timer(10.0,function=self.removeProxy,args=([service_id]))
         if proxy.ice_isA('::IceFlix::Authenticator'):
-            if str(service_id) not in self.authenticators:
-                return
             print(f'Authenticator service: {service_id}')
             self.authenticators[str(service_id)] = IceFlix.AuthenticatorPrx.uncheckedCast(proxy)
             timer.start()
 
         elif proxy.ice_isA('::IceFlix::MediaCatalog'):
-            if str(service_id) not in self.mediaCatalogs:
-                return
             print(f'MediaCatalog service: {service_id}')
             self.mediaCatalogs[str(service_id)] = IceFlix.MediaCatalogPrx.uncheckedCast(proxy)
             timer.start()
 
         elif proxy.ice_isA('::IceFlix::FileService'):
-            if str(service_id) not in self.fileServices:
-                return
             print(f'FileService service: {service_id}')
             self.fileServices[str(service_id)] = IceFlix.FileServicePrx.uncheckedCast(proxy)
             timer.start()
+
+        elif proxy.ice_isA('::IceFlix::Main') and service_id == mainId:
+            print(f'Main service: {service_id}')
 
     def removeProxy(self, service_id):
         "Function that removes proxys from the proxys lists after 10 secs"
@@ -112,13 +111,11 @@ class MainApp(Ice.Application):
         self.announcementServant = Announcement()
         self.servant = Main(self.announcementServant)
         self.proxy = None
-        self.mainId = str(uuid.uuid4())
-        self.adapterMain = None
-        self.adapterAnnouncement = None
+        self.adapter = None
 
     def announceMain(self, announcer):
         """Function that announces main in the topic "Announcement" every 10 secs."""
-        announcer.announce(self.proxy, self.mainId)
+        announcer.announce(self.proxy, mainId)
         timer = threading.Timer(10.0,function=self.announceMain,args=([announcer]))
         timer.start()
 
@@ -129,15 +126,14 @@ class MainApp(Ice.Application):
         logging.info("Running Main application")
 
         comm = self.communicator()
-        self.adapterMain = comm.createObjectAdapter("MainAdapter")
-        self.adapterMain.activate()
+        self.adapter = comm.createObjectAdapter("MainAdapter")
+        self.adapter.activate()
 
-        self.proxy = self.adapterMain.addWithUUID(self.servant)
+        self.proxy = self.adapter.addWithUUID(self.servant)
 
         topicManagerPrx = comm.stringToProxy("IceStorm/TopicManager:tcp -p 10000")
         topicManager = IceStorm.TopicManagerPrx.checkedCast(topicManagerPrx)
-        self.adapterAnnouncement = comm.createObjectAdapter("AnnouncementAdapter")
-        subscriber = self.adapterAnnouncement.addWithUUID(self.announcementServant)
+        subscriber = self.adapter.addWithUUID(self.announcementServant)
 
         topic = topicManager.retrieve("Announcements")
         topic.subscribeAndGetPublisher({},subscriber)
@@ -147,9 +143,10 @@ class MainApp(Ice.Application):
 
         self.announceMain(announcer)
 
-        self.adapterAnnouncement.activate()
         self.shutdownOnInterrupt()
         comm.waitForShutdown()
+
+        topic.unsubscribe(subscriber)
 
         return 0
 
