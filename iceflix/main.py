@@ -1,6 +1,6 @@
 """Main service for IceFlix"""
 #!/usr/bin/env python3
-#pylint: disable=invalid-name, unused-argument, import-error
+#pylint: disable=invalid-name, unused-argument, import-error, no-member, wrong-import-position
 
 import logging
 
@@ -32,6 +32,7 @@ class Announcement(IceFlix.Announcement):
         "Announcements handler."
 
         timer = threading.Timer(10.0,function=self.removeProxy,args=([service_id]))
+        timer.daemon = True
         if proxy.ice_isA('::IceFlix::Authenticator'):
             print(f'Authenticator service: {service_id}')
             self.authenticators[str(service_id)] = IceFlix.AuthenticatorPrx.uncheckedCast(proxy)
@@ -66,17 +67,35 @@ class Main(IceFlix.Main):
 
     def __init__(self, announcement):
         self.announcement = announcement
+        self.last_auth = None
+        self.last_catalog = None
+        self.last_file= None
 
     def getAuthenticator(self, current=None):
         "Return the stored Authenticator proxy."
         authList = list(self.announcement.authenticators.values())
         if len(authList) != 0:
             for i in authList:
-                try:
-                    if i.ice_ping() is None:
-                        return IceFlix.AuthenticatorPrx.checkedCast(i)
-                except Exception:
-                    continue
+                if self.last_auth is None or len(authList) == 1:
+                    try:
+                        if i.ice_ping() is None:
+                            self.last_auth = i
+                            return IceFlix.AuthenticatorPrx.checkedCast(i)
+                    except Exception:
+                        continue
+                else:
+                    if i == self.last_auth:
+                        continue
+                    try:
+                        if i.ice_ping() is None:
+                            self.last_auth = i
+                            return IceFlix.AuthenticatorPrx.checkedCast(i)
+                    except Exception:
+                        continue
+        #Si no funciona un proxy distinto, se comprueba el ultimo enviado
+        if self.last_auth is not None:
+            if self.last_auth.ice_ping() is None:
+                return IceFlix.AuthenticatorPrx.checkedCast(self.last_auth)
         raise IceFlix.TemporaryUnavailable()
 
     def getCatalog(self, current=None):
@@ -84,11 +103,26 @@ class Main(IceFlix.Main):
         catList = list(self.announcement.mediaCatalogs.values())
         if len(catList) != 0:
             for i in catList:
-                try:
-                    if i.ice_ping() is None:
-                        return IceFlix.MediaCatalogPrx.checkedCast(i)
-                except Exception:
-                    continue
+                if self.last_catalog is None or len(catList) == 1:
+                    try:
+                        if i.ice_ping() is None:
+                            self.last_catalog = i
+                            return IceFlix.MediaCatalogPrx.checkedCast(i)
+                    except Exception:
+                        continue
+                else:
+                    if i == self.last_catalog:
+                        continue
+                    try:
+                        if i.ice_ping() is None:
+                            self.last_catalog = i
+                            return IceFlix.MediaCatalogPrx.checkedCast(i)
+                    except Exception:
+                        continue
+        #Si no funciona un proxy distinto, se comprueba el ultimo enviado
+        if self.last_catalog is not None:
+            if self.last_catalog.ice_ping() is None:
+                return IceFlix.MediaCatalogPrx.checkedCast(self.last_catalog)
         raise IceFlix.TemporaryUnavailable()
 
     def getFileService(self, current=None):
@@ -96,11 +130,26 @@ class Main(IceFlix.Main):
         fsList = list(self.announcement.fileServices.values())
         if len(fsList) != 0:
             for i in fsList:
-                try:
-                    if i.ice_ping() is None:
-                        return IceFlix.FileServicePrx.checkedCast(i)
-                except Exception:
-                    continue
+                if self.last_file is None or len(fsList) == 1:
+                    try:
+                        if i.ice_ping() is None:
+                            self.last_file = i
+                            return IceFlix.FileServicePrx.checkedCast(i)
+                    except Exception:
+                        continue
+                else:
+                    if i == self.last_file:
+                        continue
+                    try:
+                        if i.ice_ping() is None:
+                            self.last_file = i
+                            return IceFlix.FileServicePrx.checkedCast(i)
+                    except Exception:
+                        continue
+        #Si no funciona un proxy distinto, se comprueba el ultimo enviado
+        if self.last_file is not None:
+            if self.last_file.ice_ping() is None:
+                return IceFlix.FileServicePrx.checkedCast(self.last_file)
         raise IceFlix.TemporaryUnavailable()
 
 class MainApp(Ice.Application):
@@ -117,6 +166,7 @@ class MainApp(Ice.Application):
         """Function that announces main in the topic "Announcement" every 10 secs."""
         announcer.announce(self.proxy, mainId)
         timer = threading.Timer(10.0,function=self.announceMain,args=([announcer]))
+        timer.daemon = True
         timer.start()
 
 
