@@ -48,8 +48,6 @@ class Announcement(IceFlix.Announcement):
             self.fileServices[str(service_id)] = IceFlix.FileServicePrx.uncheckedCast(proxy)
             timer.start()
 
-        elif proxy.ice_isA('::IceFlix::Main') and service_id == mainId:
-            print(f'Main service: {service_id}')
 
     def removeProxy(self, service_id):
         "Function that removes proxys from the proxys lists after 10 secs"
@@ -181,11 +179,12 @@ class MainApp(Ice.Application):
 
         self.proxy = self.adapter.addWithUUID(self.servant)
 
-        topicManagerPrx = comm.stringToProxy("IceStorm/TopicManager:tcp -p 10000")
-        topicManager = IceStorm.TopicManagerPrx.checkedCast(topicManagerPrx)
+        topic_manager = IceStorm.TopicManagerPrx.checkedCast(
+            comm.propertyToProxy("IceStorm.TopicManager")
+        )
         subscriber = self.adapter.addWithUUID(self.announcementServant)
 
-        topic = topicManager.retrieve("Announcements")
+        topic = topic_manager.retrieve("Announcements")
         topic.subscribeAndGetPublisher({},subscriber)
 
         publisher = topic.getPublisher()
